@@ -14,6 +14,7 @@ const staffSchema = new mongoose.Schema({
   lastActivityAt: { type: Date },
   failedLoginAttempts: { type: Number, default: 0 },
   accountLockedUntil: { type: Date, default: null }
+  email: {type: String, required: false}
 });
 
 // Prevent OverwriteModelError
