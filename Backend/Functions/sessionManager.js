@@ -12,8 +12,8 @@ const Staff = require('../Model/staff');
 
 // Session configuration
 const SESSION_CONFIG = {
-  TOKEN_EXPIRY: '5m', // Token expires in 5 minutes
-  INACTIVITY_TIMEOUT: 5 * 60 * 1000, // 5 minutes in milliseconds
+  TOKEN_EXPIRY: '1m', // Token expires in 5 minutes
+  INACTIVITY_TIMEOUT: 1 * 60 * 1000, // 5 minutes in milliseconds
   SECRET_KEY: process.env.JWT_SECRET || 'hospital_system_secret_key_2024' // Change this in production
 };
 

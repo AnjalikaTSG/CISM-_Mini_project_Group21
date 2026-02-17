@@ -15,6 +15,7 @@ const LoginScreen = () => {
     const [showForgotModal, setShowForgotModal] = useState(false);
     const [forgotData, setForgotData] = useState({ username: '', employeeNumber: '' });
     const [forgotStatus, setForgotStatus] = useState('');
+    const [loginError, setLoginError] = useState('');
     const API_BASE_URL = 'http://localhost:3000';
     const handleForgotChange = (field, value) => {
         setForgotData(prev => ({ ...prev, [field]: value }));
@@ -46,10 +47,11 @@ const LoginScreen = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setLoginError('');
         
         // Basic validation
         if (!formData.username.trim() || !formData.password.trim()) {
-            alert('Please enter both username and password');
+            setLoginError('Please enter both username and password');
             return;
         }
 
@@ -68,6 +70,7 @@ const LoginScreen = () => {
             if (response.ok) {
                 // Login success: store user data and token
                 console.log('Login successful:', data);
+                setLoginError('');
                 
                 // Store token and user data using useAuth login function
                 const role = data.staff.isAdmin ? 'admin' : 'staff';
@@ -90,16 +93,19 @@ const LoginScreen = () => {
                 }
             } else {
                 // Show error message
-                alert(data.message || 'Login failed. Please check your credentials.');
+                setLoginError(data.message || 'Login failed. Please check your credentials.');
             }
         } catch (error) {
             console.error('Login error:', error);
-            alert('Network error. Please try again.');
+            setLoginError('Network error. Please try again.');
         }
     };
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+        if (loginError) {
+            setLoginError('');
+        }
     };
 
     const handleRegisterClick = () => {
@@ -235,6 +241,11 @@ const LoginScreen = () => {
                                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                         </button>
                                     </div>
+                                    {loginError && (
+                                        <div className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-xs text-red-100">
+                                            {loginError}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Forgot Password Link */}

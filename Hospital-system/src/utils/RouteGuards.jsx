@@ -1,6 +1,34 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import useAuth from './useAuth';
+
+const IDLE_TIMEOUT_MS = 60 * 1000;
+
+const useIdleLogout = (enabled, onIdle) => {
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    let timeoutId;
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(onIdle, IDLE_TIMEOUT_MS);
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, resetTimer, { passive: true });
+    });
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, resetTimer);
+      });
+    };
+  }, [enabled, onIdle]);
+};
 
 // Loading component
 const AuthLoader = () => (
@@ -14,8 +42,16 @@ const AuthLoader = () => (
 
 // Protected Route Component - Requires login
 export const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleIdleLogout = useCallback(() => {
+    logout();
+    navigate('/loginScreen', { replace: true });
+  }, [logout, navigate]);
+
+  useIdleLogout(isAuthenticated, handleIdleLogout);
 
   console.log('🛡️ ProtectedRoute check:', { 
     isAuthenticated, 
@@ -44,8 +80,16 @@ export const ProtectedRoute = ({ children }) => {
 
 // Admin Only Route Component - Requires admin privileges
 export const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleIdleLogout = useCallback(() => {
+    logout();
+    navigate('/loginScreen', { replace: true });
+  }, [logout, navigate]);
+
+  useIdleLogout(isAuthenticated, handleIdleLogout);
 
   if (loading) {
     return <AuthLoader />;
@@ -82,8 +126,16 @@ export const GuestRoute = ({ children }) => {
 
 // Medical Staff Route Component - Only for Doctors and Nurses
 export const MedicalStaffRoute = ({ children }) => {
-  const { isAuthenticated, isMedicalStaff, loading } = useAuth();
+  const { isAuthenticated, isMedicalStaff, loading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleIdleLogout = useCallback(() => {
+    logout();
+    navigate('/loginScreen', { replace: true });
+  }, [logout, navigate]);
+
+  useIdleLogout(isAuthenticated, handleIdleLogout);
 
   if (loading) {
     return <AuthLoader />;
