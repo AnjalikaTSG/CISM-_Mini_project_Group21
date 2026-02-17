@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SideBar from '../functions/SideBar';
 import { ArrowLeft, FileText, Building2, Calendar, User } from 'lucide-react';
+import { fieldClassName, validateRequired } from '../utils/validation';
 
 
 const PatientHospitalization = () => {
@@ -10,6 +11,7 @@ const PatientHospitalization = () => {
   const [records, setRecords] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState({});
   const [form, setForm] = React.useState({
     date: new Date().toLocaleDateString(),
     ward: "Base Hospital - Avissawella",
@@ -37,6 +39,17 @@ const PatientHospitalization = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+
+    const nextErrors = {
+      ward: validateRequired(form.ward, 'Hospital name'),
+      diagnosis: validateRequired(form.diagnosis, 'Diagnosis'),
+    };
+    Object.keys(nextErrors).forEach((k) => {
+      if (!nextErrors[k]) delete nextErrors[k];
+    });
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     const newRecord = { ...form };
     const res = await fetch(`http://localhost:3000/patient/${patientId}/hospitalization`, {
       method: "POST",
@@ -116,7 +129,11 @@ const PatientHospitalization = () => {
                     value={form.ward}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    aria-invalid={Boolean(fieldErrors.ward)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.ward)
+                    )}
                   >
                     <option value="Base Hospital - Rathnapura">General Hospital - Colombo</option>
                     <option value="Base Hospital - Avissawella">Base Hospital - Avissawella</option>
@@ -125,6 +142,7 @@ const PatientHospitalization = () => {
                     <option value="Base Hospital - Rathnapura">Base Hospital - Rathnapura</option>
                     <option value="Base Hospital - Rathnapura">Base Hospital - Kegalle</option>
                   </select>
+                  {fieldErrors.ward && <p className="text-sm text-red-600">{fieldErrors.ward}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -137,8 +155,14 @@ const PatientHospitalization = () => {
                     value={form.diagnosis}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    maxLength={4000}
+                    aria-invalid={Boolean(fieldErrors.diagnosis)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.diagnosis)
+                    )}
                   />
+                  {fieldErrors.diagnosis && <p className="text-sm text-red-600">{fieldErrors.diagnosis}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -150,6 +174,7 @@ const PatientHospitalization = () => {
                     name="followUp"
                     value={form.followUp}
                     onChange={handleChange}
+                    maxLength={4000}
                     className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
                   />
                 </div>

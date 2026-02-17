@@ -1,12 +1,15 @@
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import SideBar from '../functions/SideBar';
 import { Calendar, Pill, FileText } from "lucide-react";
+import { fieldClassName, validateRequired } from '../utils/validation';
 
 const PatientMedication = () => {
   const { patientId } = useParams();
+  const navigate = useNavigate();
   const [medications, setMedications] = useState([]);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [form, setForm] = useState({
     medication: "",
     dosage: "",
@@ -27,7 +30,18 @@ const PatientMedication = () => {
 
   // Handle form submit
   const handleSubmit = async e => {
-    e.preventDefault();
+    e.preventDefault?.();
+
+    const nextErrors = {
+      medication: validateRequired(form.medication, 'Medication'),
+      dosage: validateRequired(form.dosage, 'Dosage'),
+    };
+    Object.keys(nextErrors).forEach((k) => {
+      if (!nextErrors[k]) delete nextErrors[k];
+    });
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     const newMed = {
       ...form,
       date: new Date().toLocaleDateString()
@@ -108,8 +122,14 @@ const PatientMedication = () => {
                     value={form.medication}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    maxLength={256}
+                    aria-invalid={Boolean(fieldErrors.medication)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.medication)
+                    )}
                   />
+                  {fieldErrors.medication && <p className="text-sm text-red-600">{fieldErrors.medication}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -122,8 +142,14 @@ const PatientMedication = () => {
                     value={form.dosage}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    maxLength={256}
+                    aria-invalid={Boolean(fieldErrors.dosage)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.dosage)
+                    )}
                   />
+                  {fieldErrors.dosage && <p className="text-sm text-red-600">{fieldErrors.dosage}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -135,6 +161,7 @@ const PatientMedication = () => {
                     value={form.comments}
                     onChange={handleChange}
                     rows={3}
+                    maxLength={4000}
                     className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
                   />
                 </div>

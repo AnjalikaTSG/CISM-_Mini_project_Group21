@@ -48,10 +48,30 @@ const PatientRecords = () => {
 
   // Helper function to highlight search terms
   const highlightText = (text, searchTerm) => {
-    if (!searchTerm || !text) return text;
-    
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
-    return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+    const safeText = typeof text === 'string' ? text : String(text ?? '');
+    const term = (searchTerm || '').toString().trim();
+
+    if (!term) return safeText;
+
+    const lowerText = safeText.toLowerCase();
+    const lowerTerm = term.toLowerCase();
+    const parts = [];
+
+    let start = 0;
+    let matchIndex;
+    while ((matchIndex = lowerText.indexOf(lowerTerm, start)) !== -1) {
+      if (matchIndex > start) parts.push(safeText.slice(start, matchIndex));
+      const match = safeText.slice(matchIndex, matchIndex + term.length);
+      parts.push(
+        <mark key={`${matchIndex}-${match}`} className="bg-yellow-200 px-1 rounded">
+          {match}
+        </mark>
+      );
+      start = matchIndex + term.length;
+    }
+    if (start < safeText.length) parts.push(safeText.slice(start));
+
+    return parts;
   };
 
   // Filter patients based on search
@@ -165,33 +185,30 @@ const PatientRecords = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <User className="w-5 h-5 text-blue-600" />
                   <span className="font-semibold text-gray-700">Name:</span>
-                  <span 
-                    className="text-gray-800"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightText(p.tab1?.name || 'N/A', debouncedSearch)
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Hash className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-gray-700">Patient ID:</span>
-                  <span 
-                    className="text-gray-800 font-mono"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightText(p.patientId || 'N/A', debouncedSearch)
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <IdCard className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-gray-700">NIC:</span>
-                  <span 
-                    className="text-gray-800 font-mono"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightText(p.tab1?.nic || 'N/A', debouncedSearch)
-                    }}
-                  />
-                </div>
+                   <span 
+                     className="text-gray-800"
+                   >
+                     {highlightText(p.tab1?.name || 'N/A', debouncedSearch)}
+                   </span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <Hash className="w-5 h-5 text-blue-600" />
+                   <span className="font-semibold text-gray-700">Patient ID:</span>
+                   <span 
+                     className="text-gray-800 font-mono"
+                   >
+                     {highlightText(p.patientId || 'N/A', debouncedSearch)}
+                   </span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <IdCard className="w-5 h-5 text-blue-600" />
+                   <span className="font-semibold text-gray-700">NIC:</span>
+                   <span 
+                     className="text-gray-800 font-mono"
+                   >
+                     {highlightText(p.tab1?.nic || 'N/A', debouncedSearch)}
+                   </span>
+                 </div>
                 {debouncedSearch && (p.tab2?.name || p.tab3?.name || p.tab4?.name || p.tab5?.name || p.tab6?.name) && (
                   <div className="mt-2 pt-2 border-t border-blue-200">
                     <span className="text-xs text-gray-500">Also found in other records</span>

@@ -2,6 +2,7 @@ import React from 'react';
 import SideBar from '../functions/SideBar';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Calendar, User, Stethoscope } from 'lucide-react';
+import { fieldClassName, validateRequired } from '../utils/validation';
 
 const PatientOPDRecords = () => {
   const { patientId } = useParams();
@@ -9,6 +10,7 @@ const PatientOPDRecords = () => {
   const [records, setRecords] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState({});
   const [form, setForm] = React.useState({
     date: new Date().toLocaleDateString(),
     symptoms: "",
@@ -36,6 +38,18 @@ const PatientOPDRecords = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+
+    const nextErrors = {
+      symptoms: validateRequired(form.symptoms, 'Symptoms'),
+      treatment: validateRequired(form.treatment, 'Treatment'),
+      investigation: validateRequired(form.investigation, 'Investigation'),
+    };
+    Object.keys(nextErrors).forEach((k) => {
+      if (!nextErrors[k]) delete nextErrors[k];
+    });
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     const newRecord = { ...form };
     const res = await fetch(`http://localhost:3000/patient/${patientId}/opd`, {
       method: "POST",
@@ -116,8 +130,14 @@ const PatientOPDRecords = () => {
                     value={form.symptoms}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    maxLength={4000}
+                    aria-invalid={Boolean(fieldErrors.symptoms)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.symptoms)
+                    )}
                   />
+                  {fieldErrors.symptoms && <p className="text-sm text-red-600">{fieldErrors.symptoms}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -130,8 +150,14 @@ const PatientOPDRecords = () => {
                     value={form.treatment}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    maxLength={4000}
+                    aria-invalid={Boolean(fieldErrors.treatment)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.treatment)
+                    )}
                   />
+                  {fieldErrors.treatment && <p className="text-sm text-red-600">{fieldErrors.treatment}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -144,8 +170,14 @@ const PatientOPDRecords = () => {
                     value={form.investigation}
                     onChange={handleChange}
                     required
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700"
+                    maxLength={4000}
+                    aria-invalid={Boolean(fieldErrors.investigation)}
+                    className={fieldClassName(
+                      "w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-700",
+                      Boolean(fieldErrors.investigation)
+                    )}
                   />
+                  {fieldErrors.investigation && <p className="text-sm text-red-600">{fieldErrors.investigation}</p>}
                 </div>
                 <div className="flex gap-4 pt-4">
                   <button

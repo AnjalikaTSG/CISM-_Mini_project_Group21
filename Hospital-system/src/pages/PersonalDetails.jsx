@@ -8,6 +8,16 @@ import { FaCalendarAlt } from "react-icons/fa";
 import SideBar2 from "../functions/SideBar2";
 import { User, Phone, MapPin, Heart, Calendar, IdCard, Hash, Users, GraduationCap } from "lucide-react";
 import { generatePatientId } from "../utils/patientIdGenerator";
+import {
+  fieldClassName,
+  normalizeNic,
+  normalizePhone,
+  validateName,
+  validateNumberRange,
+  validateRelationship,
+  validateSriLankaNic,
+  validateSriLankaPhone,
+} from "../utils/validation";
 
 const TABS = [1, 2, 3, 4, 5, 6];
 
@@ -39,6 +49,8 @@ const PersonalDetails = () => {
     6: {},
   });
   const [patientId, setPatientId] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   // Generate unique patient ID when component mounts
   useEffect(() => {
@@ -49,12 +61,34 @@ const PersonalDetails = () => {
   const Navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(null);
 
+  const currentTab = formData[tabIndex] || {};
+  const emergencyActive =
+    Boolean((currentTab.emergencyContactName || '').toString().trim()) ||
+    Boolean((currentTab.emergencyContactRelationship || '').toString().trim()) ||
+    Boolean((currentTab.emergencyContactPhone || '').toString().trim()) ||
+    Boolean((currentTab.emergencyContactGender || '').toString().trim());
+
+  const liveEmergencyErrors = emergencyActive
+    ? {
+        emergencyContactName: validateName(currentTab.emergencyContactName, { required: true, maxLen: 100 }),
+        emergencyContactRelationship: validateRelationship(currentTab.emergencyContactRelationship, { required: true, maxLen: 50 }),
+        emergencyContactPhone: validateSriLankaPhone(currentTab.emergencyContactPhone, { required: true }),
+        emergencyContactGender: currentTab.emergencyContactGender ? null : 'Emergency contact gender is required',
+      }
+    : {};
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    let nextValue = value;
+    if (name === 'nic') nextValue = normalizeNic(value).slice(0, 12);
+    if (name === 'emergencyContactPhone') nextValue = value.toString().slice(0, 15);
+    if (name === 'name') nextValue = value.toString().slice(0, 100);
     
     setFormData({
       ...formData,
-      [tabIndex]: { ...formData[tabIndex], [name]: value }
+      [tabIndex]: { ...formData[tabIndex], [name]: nextValue }
     });
     
     // If age is manually changed, validate against date of birth
@@ -77,6 +111,7 @@ const PersonalDetails = () => {
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
+    setTouched((prev) => ({ ...prev, dateOfBirth: true }));
     setFormData({
       ...formData,
       [tabIndex]: { ...formData[tabIndex], dateOfBirth: date }
@@ -101,15 +136,38 @@ const PersonalDetails = () => {
   };
 
   const handleRadioChange = (name, value) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
     setFormData({
       ...formData,
       [tabIndex]: { ...formData[tabIndex], [name]: value }
     });
   };
 
+  const validateTab1 = () => {
+    const tab = formData[tabIndex] || {};
+    const nextErrors = {};
+
+    nextErrors.name = validateName(tab.name, { required: true, maxLen: 100 });
+    nextErrors.nic = validateSriLankaNic(tab.nic);
+    nextErrors.age = validateNumberRange(tab.age, { required: true, min: 0, max: 120, label: 'Age' });
+    nextErrors.gender = tab.gender ? null : 'Gender is required';
+    nextErrors.dateOfBirth = selectedDate ? null : 'Date of birth is required';
+
+    nextErrors.emergencyContactName = validateName(tab.emergencyContactName, { required: emergencyActive, maxLen: 100 });
+    nextErrors.emergencyContactRelationship = validateRelationship(tab.emergencyContactRelationship, { required: emergencyActive, maxLen: 50 });
+    nextErrors.emergencyContactPhone = validateSriLankaPhone(tab.emergencyContactPhone, { required: emergencyActive });
+    nextErrors.emergencyContactGender = emergencyActive && !tab.emergencyContactGender ? 'Emergency contact gender is required' : null;
+
+    Object.keys(nextErrors).forEach((k) => {
+      if (!nextErrors[k]) delete nextErrors[k];
+    });
+
+    return nextErrors;
+  };
+
   const regeneratePatientId = () => {
     if (formData[tabIndex].nic && selectedDate) {
-      const uniqueId = generatePatientId(formData[tabIndex].nic, selectedDate);
+      const uniqueId = generatePatientId(normalizeNic(formData[tabIndex].nic), selectedDate);
       setPatientId(uniqueId);
       console.log('Regenerated Patient ID:', uniqueId);
     } else {
@@ -144,21 +202,34 @@ const PersonalDetails = () => {
       6: {},
     });
     setSelectedDate(null);
+    setErrors({});
+    setTouched({});
     alert('Form cleared successfully!');
   };
 
   const handleNext = async () => {
-    // Basic validation - check if required fields are filled
-    const requiredFields = ['name', 'nic', 'age', 'gender'];
-    const missingFields = requiredFields.filter(field => !formData[tabIndex][field]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in the following required fields: ${missingFields.join(', ')}`);
+    const nextErrors = validateTab1();
+    setErrors(nextErrors);
+    setTouched((prev) => ({
+      ...prev,
+      name: true,
+      nic: true,
+      age: true,
+      gender: true,
+      dateOfBirth: true,
+      emergencyContactName: true,
+      emergencyContactRelationship: true,
+      emergencyContactPhone: true,
+      emergencyContactGender: true,
+    }));
+
+    if (Object.keys(nextErrors).length > 0) {
+      alert('Please correct the highlighted fields (marked in red).');
       return;
     }
 
     // Generate patient ID based on NIC and date of birth
-    const generatedPatientId = generatePatientId(formData[tabIndex].nic, selectedDate);
+    const generatedPatientId = generatePatientId(normalizeNic(formData[tabIndex].nic), selectedDate);
     setPatientId(generatedPatientId);
 
     // Check if patientId already exists before saving
@@ -179,6 +250,8 @@ const PersonalDetails = () => {
       const tabsToSave = {
         tab1: {
           ...formData[tabIndex],
+          nic: normalizeNic(formData[tabIndex].nic),
+          emergencyContactPhone: normalizePhone(formData[tabIndex].emergencyContactPhone),
           dateOfBirth: selectedDate ? selectedDate.toISOString() : null
         }
       };
@@ -234,8 +307,16 @@ const PersonalDetails = () => {
                           value={formData[tabIndex].name || ''}
                           onChange={handleChange}
                           placeholder="Enter full name"
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          maxLength={100}
+                          aria-invalid={Boolean(touched.name && errors.name)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(touched.name && errors.name)
+                          )}
                         />
+                        {touched.name && errors.name && (
+                          <p className="text-sm text-red-600">{errors.name}</p>
+                        )}
                       </div>
                       {/* NIC */}
                       <div className="flex flex-col space-y-2">
@@ -248,8 +329,16 @@ const PersonalDetails = () => {
                           value={formData[tabIndex].nic || ''}
                           onChange={handleChange}
                           placeholder="NIC no."
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          maxLength={12}
+                          aria-invalid={Boolean(touched.nic && errors.nic)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(touched.nic && errors.nic)
+                          )}
                         />
+                        {touched.nic && errors.nic && (
+                          <p className="text-sm text-red-600">{errors.nic}</p>
+                        )}
                       </div>
                       {/* Age */}
                       <div className="flex flex-col space-y-2">
@@ -262,8 +351,17 @@ const PersonalDetails = () => {
                           value={formData[tabIndex].age || ''}
                           onChange={handleChange}
                           placeholder="Enter age"
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          min={0}
+                          max={120}
+                          aria-invalid={Boolean(touched.age && errors.age)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(touched.age && errors.age)
+                          )}
                         />
+                        {touched.age && errors.age && (
+                          <p className="text-sm text-red-600">{errors.age}</p>
+                        )}
                       </div>
                       {/* DOB */}
                       <div className="flex flex-col space-y-2">
@@ -279,11 +377,17 @@ const PersonalDetails = () => {
                             scrollableYearDropdown
                             yearDropdownItemNumber={50}
                             showMonthDropdown
-                            className="w-full p-3 pl-10 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                            className={fieldClassName(
+                              "w-full p-3 pl-10 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                              Boolean(touched.dateOfBirth && errors.dateOfBirth)
+                            )}
                             placeholderText="Select Date"
                           />
                           <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                         </div>
+                        {touched.dateOfBirth && errors.dateOfBirth && (
+                          <p className="text-sm text-red-600">{errors.dateOfBirth}</p>
+                        )}
                       </div>
                       {/* Gender */}
                       <div className="flex flex-col space-y-2">
@@ -294,12 +398,19 @@ const PersonalDetails = () => {
                           name="gender"
                           value={formData[tabIndex].gender || ''}
                           onChange={handleChange}
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          aria-invalid={Boolean(touched.gender && errors.gender)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(touched.gender && errors.gender)
+                          )}
                         >
                           <option value="">Select Gender</option>
                           <option value="male">Male</option>
                           <option value="female">Female</option>
                         </select>
+                        {touched.gender && errors.gender && (
+                          <p className="text-sm text-red-600">{errors.gender}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -321,8 +432,16 @@ const PersonalDetails = () => {
                           value={formData[tabIndex].emergencyContactName || ''}
                           onChange={handleChange}
                           placeholder="Emergency contact name"
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          maxLength={100}
+                          aria-invalid={Boolean(emergencyActive && liveEmergencyErrors.emergencyContactName)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(emergencyActive && liveEmergencyErrors.emergencyContactName)
+                          )}
                         />
+                        {emergencyActive && liveEmergencyErrors.emergencyContactName && (
+                          <p className="text-sm text-red-600">{liveEmergencyErrors.emergencyContactName}</p>
+                        )}
                       </div>
                       {/* Relationship */}
                       <div className="flex flex-col space-y-2">
@@ -335,8 +454,16 @@ const PersonalDetails = () => {
                           value={formData[tabIndex].emergencyContactRelationship || ''}
                           onChange={handleChange}
                           placeholder="Relationship"
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          maxLength={50}
+                          aria-invalid={Boolean(emergencyActive && liveEmergencyErrors.emergencyContactRelationship)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(emergencyActive && liveEmergencyErrors.emergencyContactRelationship)
+                          )}
                         />
+                        {emergencyActive && liveEmergencyErrors.emergencyContactRelationship && (
+                          <p className="text-sm text-red-600">{liveEmergencyErrors.emergencyContactRelationship}</p>
+                        )}
                       </div>
                       {/* Phone Number */}
                       <div className="flex flex-col space-y-2">
@@ -349,8 +476,17 @@ const PersonalDetails = () => {
                           value={formData[tabIndex].emergencyContactPhone || ''}
                           onChange={handleChange}
                           placeholder="Telephone number"
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          maxLength={15}
+                          inputMode="tel"
+                          aria-invalid={Boolean(emergencyActive && liveEmergencyErrors.emergencyContactPhone)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(emergencyActive && liveEmergencyErrors.emergencyContactPhone)
+                          )}
                         />
+                        {emergencyActive && liveEmergencyErrors.emergencyContactPhone && (
+                          <p className="text-sm text-red-600">{liveEmergencyErrors.emergencyContactPhone}</p>
+                        )}
                       </div>
                       {/* Emergency Contact Gender */}
                       <div className="flex flex-col space-y-2">
@@ -361,12 +497,19 @@ const PersonalDetails = () => {
                           name="emergencyContactGender"
                           value={formData[tabIndex].emergencyContactGender || ''}
                           onChange={handleChange}
-                          className="w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                          aria-invalid={Boolean(emergencyActive && liveEmergencyErrors.emergencyContactGender)}
+                          className={fieldClassName(
+                            "w-full p-3 text-gray-700 rounded-lg border border-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all",
+                            Boolean(emergencyActive && liveEmergencyErrors.emergencyContactGender)
+                          )}
                         >
                           <option value="">Select Gender</option>
                           <option value="male">Male</option>
                           <option value="female">Female</option>
                         </select>
+                        {emergencyActive && liveEmergencyErrors.emergencyContactGender && (
+                          <p className="text-sm text-red-600">{liveEmergencyErrors.emergencyContactGender}</p>
+                        )}
                       </div>
                     </div>
                   </div>
