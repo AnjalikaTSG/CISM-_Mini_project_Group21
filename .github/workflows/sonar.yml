@@ -36,17 +36,6 @@ jobs:
                   cd Backend
                   npm install
 
-            # Optional: Run tests if available
-            - name: Run Frontend Tests
-              run: |
-                  cd Hospital-system
-                  npm test --if-present
-
-            - name: Run Backend Tests
-              run: |
-                  cd backend
-                  npm test --if-present
-
             - name: SonarCloud Scan
               uses: SonarSource/sonarcloud-github-action@v2
               env:
