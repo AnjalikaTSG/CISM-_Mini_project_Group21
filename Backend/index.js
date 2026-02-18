@@ -6,6 +6,7 @@ const reportRoutes = require('./Routes/reportRoutes');
 const forgotPasswordRouter = require('./Routes/forgotPassword');
 const sessionRoutes = require('./Routes/sessionRoutes');
 const opdRecordRoutes = require('./Routes/opdRecordsRoutes');
+const staffRoutes = require('./Routes/staffRoutes');
 const app=express()
 const cors = require('cors');
 
@@ -18,6 +19,7 @@ app.use('/reports', reportRoutes);
 app.use('/forgot-password', forgotPasswordRouter);
 app.use('/session', sessionRoutes);
 app.use('/opd-records', opdRecordRoutes);
+app.use('/staff', staffRoutes);
 
 connectDB()
 
