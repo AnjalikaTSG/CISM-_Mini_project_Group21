@@ -7,6 +7,8 @@ const Staff = require('../Model/staff');
 const transporter = require('../Utils/email');
 const generatePDF = require('../Utils/pdfGenerator');
 const { validatePasswordComplexity } = require('../Functions/passwordValidator');
+const authenticate = require('../Middleware/authMiddleware');
+const { requireAdmin } = require('../Middleware/rbacMiddleware');
 
 // Simulate DB with a JSON file for demo
 const REQUESTS_FILE = path.join(__dirname, '../Model/forgotPasswordRequests.json');
@@ -19,7 +21,7 @@ function writeRequests(requests) {
 	fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2));
 }
 
-// POST /forgot-password
+// POST /forgot-password - PUBLIC (anyone can submit a password reset request)
 router.post('/', async (req, res) => {
 	try {
 		const { username, employeeNumber, userType } = req.body;
@@ -89,8 +91,8 @@ router.post('/', async (req, res) => {
 	}
 });
 
-// GET /forgot-password (admin view)
-router.get('/', (req, res) => {
+// GET /forgot-password - ADMIN ONLY (admin view)
+router.get('/', authenticate, requireAdmin, (req, res) => {
 	try {
 		const requests = readRequests();
 		// Sort by most recent first
@@ -106,8 +108,8 @@ router.get('/', (req, res) => {
 	}
 });
 
-// PATCH /forgot-password/accept (admin accepts)
-router.patch('/accept', async (req, res) => {
+// PATCH /forgot-password/accept - ADMIN ONLY (admin accepts)
+router.patch('/accept', authenticate, requireAdmin, async (req, res) => {
 	try {
 		const { username, newPassword } = req.body;
 		
@@ -223,8 +225,8 @@ System Administrator
 	}
 });
 
-// PATCH /forgot-password/reject (admin rejects)
-router.patch('/reject', (req, res) => {
+// PATCH /forgot-password/reject - ADMIN ONLY (admin rejects)
+router.patch('/reject', authenticate, requireAdmin, (req, res) => {
 	try {
 		const { username, reason } = req.body;
 		
@@ -267,7 +269,7 @@ router.patch('/reject', (req, res) => {
 	}
 });
 
-// GET /forgot-password/status/:username (check request status)
+// GET /forgot-password/status/:username - PUBLIC (check request status)
 router.get('/status/:username', (req, res) => {
 	try {
 		const { username } = req.params;
@@ -302,7 +304,7 @@ router.get('/status/:username', (req, res) => {
 	}
 });
 
-// PATCH /forgot-password/change-password (user changes temporary password)
+// PATCH /forgot-password/change-password - PUBLIC (user changes temporary password)
 router.patch('/change-password', async (req, res) => {
 	try {
 		const { username, currentPassword, newPassword } = req.body;

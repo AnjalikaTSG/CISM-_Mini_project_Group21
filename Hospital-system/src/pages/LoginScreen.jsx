@@ -4,24 +4,22 @@ import { User, Lock, LogIn, Eye, EyeOff, Shield } from "lucide-react";
 import useAuth from "../utils/useAuth";
 
 const LoginScreen = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
-  const [focusedField, setFocusedField] = useState("");
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotData, setForgotData] = useState({
-    username: "",
-    employeeNumber: "",
-  });
-  const [forgotStatus, setForgotStatus] = useState("");
-  const API_BASE_URL = "http://localhost:3000";
-  const handleForgotChange = (field, value) => {
-    setForgotData((prev) => ({ ...prev, [field]: value }));
-  };
+    const navigate = useNavigate();
+    const { login } = useAuth();
+    const [showPassword, setShowPassword] = useState(false);
+    const [formData, setFormData] = useState({
+        username: "",
+        password: ""
+    });
+    const [focusedField, setFocusedField] = useState("");
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotData, setForgotData] = useState({ username: '', employeeNumber: '' });
+    const [forgotStatus, setForgotStatus] = useState('');
+    const [loginError, setLoginError] = useState('');
+    const API_BASE_URL = 'http://localhost:3000';
+    const handleForgotChange = (field, value) => {
+        setForgotData(prev => ({ ...prev, [field]: value }));
+    };
 
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
@@ -47,67 +45,68 @@ const LoginScreen = () => {
     }
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-
-    // Basic validation
-    if (!formData.username.trim() || !formData.password.trim()) {
-      alert("Please enter both username and password");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
-      });
-
-      const data = await response.json();
-
-      console.log("Login response:", data);
-
-      if (response.ok) {
-        // Login success: store user data and token
-        console.log("Login successful:", data);
-
-        // Store token and user data using useAuth login function
-        const role = data.staff.isAdmin ? "admin" : "staff";
-        login(data.staff, data.token, role);
-
-        // Check if user has temporary password
-        if (data.staff.isPasswordTemporary) {
-          // Store user info for change password page
-          localStorage.setItem("needsPasswordChange", "true");
-          alert(
-            "You are using a temporary password. You will be redirected to change your password.",
-          );
-          navigate("/change-password");
-          return;
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoginError('');
+        
+        // Basic validation
+        if (!formData.username.trim() || !formData.password.trim()) {
+            setLoginError('Please enter both username and password');
+            return;
         }
 
-        // Navigate based on user role
-        if (data.staff.isAdmin) {
-          navigate("/admin-dashboard"); // Admin dashboard
-        } else {
-          navigate("/dashboard"); // Regular user dashboard
+        try {
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: formData.username,
+                    password: formData.password
+                }),
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Login success: store user data and token
+                console.log('Login successful:', data);
+                setLoginError('');
+                
+                // Store token and user data using useAuth login function
+                const role = data.staff.isAdmin ? 'admin' : 'staff';
+                login(data.staff, data.token, role);
+                
+                // Check if user has temporary password
+                if (data.staff.isPasswordTemporary) {
+                    // Store user info for change password page
+                    localStorage.setItem('needsPasswordChange', 'true');
+                    alert('You are using a temporary password. You will be redirected to change your password.');
+                    navigate('/change-password');
+                    return;
+                }
+                
+                // Navigate based on user role
+                if (data.staff.isAdmin) {
+                    navigate('/admin-dashboard'); // Admin dashboard
+                } else {
+                    navigate('/dashboard'); // Regular user dashboard
+                }
+            } else {
+                // Show error message
+                setLoginError(data.message || 'Login failed. Please check your credentials.');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setLoginError('Network error. Please try again.');
         }
-      } else {
-        // Show error message
-        alert(data.message || "Login failed. Please check your credentials.");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      alert("Network error. Please try again.");
     }
-  };
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        if (loginError) {
+            setLoginError('');
+        }
+    };
 
   const handleRegisterClick = () => {
     navigate("/registerScreen");
@@ -268,44 +267,37 @@ const LoginScreen = () => {
                   </div>
                 </div>
 
-                {/* Password Field */}
-                <div>
-                  <label className="block text-sm font-medium text-white/90 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock
-                      className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 ${
-                        focusedField === "password"
-                          ? "text-cyan-400"
-                          : "text-white/50"
-                      }`}
-                    />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) =>
-                        handleInputChange("password", e.target.value)
-                      }
-                      onFocus={() => setFocusedField("password")}
-                      onBlur={() => setFocusedField("")}
-                      className="w-full pl-12 pr-12 py-3 lg:py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 outline-none focus:border-cyan-400 focus:shadow-lg focus:shadow-cyan-400/25 transition-all duration-300"
-                      placeholder="Enter your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-cyan-400 transition-colors duration-200"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                                {/* Password Field */}
+                                <div>
+                                    <label className="block text-sm font-medium text-white/90 mb-2">Password</label>
+                                    <div className="relative">
+                                        <Lock className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 ${
+                                            focusedField === 'password' ? 'text-cyan-400' : 'text-white/50'
+                                        }`} />
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            value={formData.password}
+                                            onChange={(e) => handleInputChange('password', e.target.value)}
+                                            onFocus={() => setFocusedField('password')}
+                                            onBlur={() => setFocusedField('')}
+                                            className="w-full pl-12 pr-12 py-3 lg:py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 outline-none focus:border-cyan-400 focus:shadow-lg focus:shadow-cyan-400/25 transition-all duration-300"
+                                            placeholder="Enter your password"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-cyan-400 transition-colors duration-200"
+                                        >
+                                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button>
+                                    </div>
+                                    {loginError && (
+                                        <div className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-xs text-red-100">
+                                            {loginError}
+                                        </div>
+                                    )}
+                                </div>
 
                 {/* Forgot Password Link */}
                 <div className="text-right">

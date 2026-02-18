@@ -1,12 +1,15 @@
-import React from "react";
-import SideBar from "../functions/SideBar";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Calendar, User, Stethoscope } from "lucide-react";
+import React from 'react';
+import SideBar from '../functions/SideBar';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, FileText, Calendar, User, Stethoscope, Shield } from 'lucide-react';
+import useRoleAccess from '../utils/useRoleAccess';
+import { apiGet, apiPost } from '../utils/api';
 import { addOpdRecord, getOpdRecords } from "../services/opd/Opd";
 
 const PatientOPDRecords = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
+  const { canEdit, userPosition, loading: roleLoading } = useRoleAccess();
   const [records, setRecords] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -20,6 +23,7 @@ const PatientOPDRecords = () => {
   const fetchRecords = async () => {
     if (patientId) {
       setLoading(true);
+      
       getOpdRecords(patientId)
         .then((data) => setRecords(data))
         .catch(() => setError("Failed to fetch OPD records"))
@@ -88,8 +92,9 @@ const PatientOPDRecords = () => {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left: Add New OPD Record */}
+        <div className={`grid grid-cols-1 ${canEdit ? 'md:grid-cols-2' : ''} gap-8`}>
+          {/* Left: Add New OPD Record - Only for doctors and nurses */}
+          {canEdit && (
           <div>
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -170,6 +175,7 @@ const PatientOPDRecords = () => {
               </form>
             </div>
           </div>
+          )}
           {/* Right: OPD History */}
           <div>
             <div className="bg-white rounded-lg shadow-md p-6">

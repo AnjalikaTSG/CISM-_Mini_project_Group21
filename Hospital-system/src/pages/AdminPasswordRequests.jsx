@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, RefreshCw, AlertCircle, CheckCircle, Hash, IdCard, KeyRound } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
-
-const API_BASE_URL = 'http://localhost:3000';
+import { apiGet, apiPatch } from '../utils/api';
 
 const AdminPasswordRequests = () => {
     const [requests, setRequests] = useState([]);
@@ -14,11 +13,8 @@ const AdminPasswordRequests = () => {
     const fetchRequests = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/forgot-password`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch password requests');
-            }
-            const data = await response.json();
+            setError(null);
+            const data = await apiGet('/forgot-password');
             // Only show requests with status 'pending'
             setRequests(data.filter(r => r.status === 'pending'));
         } catch (err) {
@@ -35,15 +31,7 @@ const AdminPasswordRequests = () => {
     const handleAccept = async (username) => {
         try {
             setMessage({ type: '', text: '' });
-            const response = await fetch(`${API_BASE_URL}/forgot-password/accept`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username })
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to accept request');
-            }
+            const data = await apiPatch('/forgot-password/accept', { username });
             
             // Show temporary password modal
             setTempPasswordModal({
@@ -64,15 +52,7 @@ const AdminPasswordRequests = () => {
     const handleReject = async (username, reason = '') => {
         try {
             setMessage({ type: '', text: '' });
-            const response = await fetch(`${API_BASE_URL}/forgot-password/reject`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, reason })
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to reject request');
-            }
+            const data = await apiPatch('/forgot-password/reject', { username, reason });
             setMessage({ type: 'success', text: data.message || 'Request rejected successfully!' });
             await fetchRequests();
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
