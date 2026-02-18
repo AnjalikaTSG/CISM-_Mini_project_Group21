@@ -1,12 +1,14 @@
-import React from "react";
-import SideBar from "../functions/SideBar";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Calendar, User, Stethoscope } from "lucide-react";
-import { addOpdRecord, getOpdRecords } from "../services/opd/Opd";
+import React from 'react';
+import SideBar from '../functions/SideBar';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, FileText, Calendar, User, Stethoscope, Shield } from 'lucide-react';
+import useRoleAccess from '../utils/useRoleAccess';
+import { apiGet, apiPost } from '../utils/api';
 
 const PatientOPDRecords = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
+  const { canEdit, userPosition, loading: roleLoading } = useRoleAccess();
   const [records, setRecords] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -14,60 +16,46 @@ const PatientOPDRecords = () => {
     date: new Date().toLocaleDateString(),
     symptoms: "",
     treatment: "",
-    investigation: "",
+    investigation: ""
   });
 
-  const fetchRecords = async () => {
+  React.useEffect(() => {
     if (patientId) {
       setLoading(true);
-      getOpdRecords(patientId)
-        .then((data) => setRecords(data))
-        .catch(() => setError("Failed to fetch OPD records"))
+      apiGet(`/patient/${patientId}/opd`)
+        .then(data => {
+          setRecords(data || []);
+          setError("");
+        })
+        .catch(err => {
+          console.error('Error fetching OPD records:', err);
+          setError(err.message || "Failed to fetch OPD records");
+        })
         .finally(() => setLoading(false));
-
-      console.log("Data: ", records);
     }
-  };
-
-  React.useEffect(() => {
-    fetchRecords();
   }, [patientId]);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     const newRecord = { ...form };
-    const res = await addOpdRecord(newRecord, patientId);
-    if (res) {
-      try {
-        await fetchRecords();
-        setForm({
-          date: new Date().toLocaleDateString(),
-          symptoms: "",
-          treatment: "",
-          investigation: "",
-        });
-      } catch {
-        alert(
-          "Record saved, but could not update history from server response.",
-        );
-      }
-    } else {
-      let errorMsg = "Failed to save record. Please try again.";
-      try {
-        const errorData = await res.json();
-        errorMsg = errorData.error || errorMsg;
-      } catch {}
-      alert(errorMsg);
+    try {
+      const updatedList = await apiPost(`/patient/${patientId}/opd`, newRecord);
+      setRecords(updatedList);
+      setForm({
+        date: new Date().toLocaleDateString(),
+        symptoms: "",
+        treatment: "",
+        investigation: ""
+      });
+    } catch (error) {
+      console.error('Error saving OPD record:', error);
+      alert(error.message || "Failed to save OPD record. Please try again.");
     }
   };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <SideBar>
@@ -88,8 +76,9 @@ const PatientOPDRecords = () => {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left: Add New OPD Record */}
+        <div className={`grid grid-cols-1 ${canEdit ? 'md:grid-cols-2' : ''} gap-8`}>
+          {/* Left: Add New OPD Record - Only for doctors and nurses */}
+          {canEdit && (
           <div>
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -99,9 +88,7 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">
-                      Date:
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Date:</label>
                   </div>
                   <input
                     type="text"
@@ -114,9 +101,7 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">
-                      Symptoms/Tentative Diagnosis:
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Symptoms/Tentative Diagnosis:</label>
                   </div>
                   <input
                     type="text"
@@ -130,9 +115,7 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">
-                      Treatment:
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Treatment:</label>
                   </div>
                   <input
                     type="text"
@@ -146,9 +129,7 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">
-                      Investigation:
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Investigation:</label>
                   </div>
                   <input
                     type="text"
@@ -170,6 +151,7 @@ const PatientOPDRecords = () => {
               </form>
             </div>
           </div>
+          )}
           {/* Right: OPD History */}
           <div>
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -182,28 +164,15 @@ const PatientOPDRecords = () => {
                 ) : error ? (
                   <div className="text-center py-12 text-red-500">{error}</div>
                 ) : records.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    No OPD records found.
-                  </div>
+                  <div className="text-center py-12 text-gray-500">No OPD records found.</div>
                 ) : (
                   <div className="space-y-4">
                     {records.map((rec, idx) => (
-                      <div
-                        key={idx}
-                        className="border rounded-lg p-4 bg-gray-50"
-                      >
-                        <div className="font-semibold text-gray-800">
-                          Date: {rec.date}
-                        </div>
-                        <div className="text-gray-700">
-                          Symptoms/Tentative Diagnosis: {rec.symptoms}
-                        </div>
-                        <div className="text-gray-700">
-                          Treatment: {rec.treatment}
-                        </div>
-                        <div className="text-gray-700">
-                          Investigation: {rec.investigation}
-                        </div>
+                      <div key={idx} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="font-semibold text-gray-800">Date: {rec.date}</div>
+                        <div className="text-gray-700">Symptoms/Tentative Diagnosis: {rec.symptoms}</div>
+                        <div className="text-gray-700">Treatment: {rec.treatment}</div>
+                        <div className="text-gray-700">Investigation: {rec.investigation}</div>
                       </div>
                     ))}
                   </div>
@@ -216,5 +185,6 @@ const PatientOPDRecords = () => {
     </SideBar>
   );
 };
+
 
 export default PatientOPDRecords;

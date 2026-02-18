@@ -1,10 +1,15 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const Staff = require('../../Model/staff');
 const { generateToken, updateLastActivity } = require('../sessionManager');
 
 // Account lockout constants
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 5; // Lock account for 5 minutes
+
+// JWT Secret - In production, this should be in environment variables
+const JWT_SECRET = process.env.JWT_SECRET || 'hospital_system_secret_key_2024';
+const JWT_EXPIRES_IN = '24h'; // Token expires in 24 hours
 
 async function loginStaff(req, res) {
   try {
@@ -15,8 +20,18 @@ async function loginStaff(req, res) {
       return res.status(400).json({ message: 'Username and password are required.' });
     }
 
+    // NoSQL Injection Prevention: Validate that username and password are strings, not objects
+    if (typeof username !== 'string' || typeof password !== 'string') {
+      console.warn(`[SECURITY] Type validation failed - username or password is not a string`);
+      console.warn(`[SECURITY] Request from IP: ${req.ip}`);
+      return res.status(400).json({ 
+        message: 'Invalid username or password format.',
+        error: 'VALIDATION_ERROR'
+      });
+    }
+
     // Find staff by username
-    const staff = await Staff.findOne({ username });
+    const staff = await Staff.findOne({ username: username.trim() });
     if (!staff) {
       return res.status(401).json({ message: 'Invalid username or password.' });
     }
@@ -93,33 +108,41 @@ async function loginStaff(req, res) {
       });
     }
 
-    // Login successful - reset failed attempts and update last login/activity
-    await Staff.updateOne(
-      { _id: staff._id },
+    // Generate JWT token
+    const token = jwt.sign(
       { 
-        failedLoginAttempts: 0,
-        accountLockedUntil: null,
-        lastLoginAt: new Date(),
-        lastActivityAt: new Date()
-      }
+        id: staff._id,
+        username: staff.username,
+        position: staff.position,
+        employeeNumber: staff.employee_number,
+        isAdmin: isAdmin
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // Generate JWT token for session management
-    const token = generateToken(staff.username, staff.employee_number, isAdmin, staff.position);
+    // Update last login and reset session activity
+    const now = new Date();
+    staff.lastLoginAt = now;
+    staff.lastActivityAt = now; // Reset session activity on login
+    staff.failedLoginAttempts = 0; // Reset failed attempts on successful login
+    await staff.save();
 
     // Login successful
     res.status(200).json({ 
-      message: 'Login successful.', 
-      token: token,
+      message: 'Login successful.',
+      token: token, // JWT token for authentication
+      expiresIn: JWT_EXPIRES_IN,
+
       staff: { 
         username: staff.username, 
         position: staff.position, 
         employeeNumber: staff.employee_number,
-        isAdmin: isAdmin,
-        isPasswordTemporary: staff.isPasswordTemporary
+        isAdmin: isAdmin
       } 
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error.', error: error.message });
   }
 }

@@ -16,6 +16,17 @@ const RegisterScreen = () => {
     });
     const [focusedField, setFocusedField] = useState("");
     const API_BASE_URL = 'http://localhost:3000';
+    const passwordRules = [
+        { label: 'Minimum 12 characters', test: (value) => value.length >= 12 },
+        { label: 'At least one uppercase letter', test: (value) => /[A-Z]/.test(value) },
+        { label: 'At least one lowercase letter', test: (value) => /[a-z]/.test(value) },
+        { label: 'At least one number', test: (value) => /[0-9]/.test(value) },
+        { label: 'At least one special character (!@#$%^&*()_+-=[]{};\":|,.<>/?)', test: (value) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value) }
+    ];
+
+    const passwordErrors = formData.password
+        ? passwordRules.filter((rule) => !rule.test(formData.password))
+        : [];
 
     const handleRegister = async (e) => {
         e.preventDefault();
@@ -26,11 +37,16 @@ const RegisterScreen = () => {
             return;
         }
 
+        if (passwordErrors.length > 0) {
+            setMessage({ type: 'error', text: 'Password does not meet the required rules.' });
+            return;
+        }
+
         setLoading(true);
         setMessage({ type: '', text: '' });
 
         try {
-            const response = await fetch(`${API_BASE_URL}/admin/staff`, {
+            const response = await fetch(`${API_BASE_URL}/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -61,7 +77,10 @@ const RegisterScreen = () => {
                 });
                 setSelectedPosition("");
             } else {
-                setMessage({ type: 'error', text: data.message || 'Registration failed. Please try again.' });
+                const errorText = Array.isArray(data.details)
+                    ? data.details.join(' ')
+                    : (data.message || 'Registration failed. Please try again.');
+                setMessage({ type: 'error', text: errorText });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error. Please check your connection.' });
@@ -183,6 +202,19 @@ const RegisterScreen = () => {
                                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                         </button>
                                     </div>
+                                    {formData.password && passwordErrors.length > 0 && (
+                                        <div className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3">
+                                            <p className="text-xs font-semibold text-red-100 mb-2">Password requirements</p>
+                                            <ul className="text-xs text-red-100/80 space-y-1">
+                                                {passwordErrors.map((rule) => (
+                                                    <li key={rule.label} className="flex items-start gap-2">
+                                                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-red-300"></span>
+                                                        <span>{rule.label}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Employee Number Field */}

@@ -4,9 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const Staff = require('../Model/staff');
-const transporter = require('../Utils/email');
-const generatePDF = require('../Utils/pdfGenerator');
 const { validatePasswordComplexity } = require('../Functions/passwordValidator');
+const authenticate = require('../Middleware/authMiddleware');
+const { requireAdmin } = require('../Middleware/rbacMiddleware');
 
 // Simulate DB with a JSON file for demo
 const REQUESTS_FILE = path.join(__dirname, '../Model/forgotPasswordRequests.json');
@@ -19,7 +19,7 @@ function writeRequests(requests) {
 	fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2));
 }
 
-// POST /forgot-password
+// POST /forgot-password - PUBLIC (anyone can submit a password reset request)
 router.post('/', async (req, res) => {
 	try {
 		const { username, employeeNumber, userType } = req.body;
@@ -89,8 +89,8 @@ router.post('/', async (req, res) => {
 	}
 });
 
-// GET /forgot-password (admin view)
-router.get('/', (req, res) => {
+// GET /forgot-password - ADMIN ONLY (admin view)
+router.get('/', authenticate, requireAdmin, (req, res) => {
 	try {
 		const requests = readRequests();
 		// Sort by most recent first
@@ -106,8 +106,8 @@ router.get('/', (req, res) => {
 	}
 });
 
-// PATCH /forgot-password/accept (admin accepts)
-router.patch('/accept', async (req, res) => {
+// PATCH /forgot-password/accept - ADMIN ONLY (admin accepts)
+router.patch('/accept', authenticate, requireAdmin, async (req, res) => {
 	try {
 		const { username, newPassword } = req.body;
 		
@@ -147,8 +147,6 @@ router.patch('/accept', async (req, res) => {
 		const saltRounds = 10;
 		const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);
 
-		const expiryTime = new Date(Date.now() + 12 * 60 * 60 * 1000);
-
 		// Update user's password in database
 		const updateResult = await Staff.findOneAndUpdate(
 			{ username: username },
@@ -168,50 +166,21 @@ router.patch('/accept', async (req, res) => {
 			});
 		}
 
-		const pdfPath = await generatePDF(
-            username,
-            updateResult.employee_number,
-            tempPassword
-        );
+		// Update request status
+		requests[requestIndex] = {
+			...requests[requestIndex],
+			status: 'accepted',
+			acceptedAt: new Date(),
+			tempPassword: tempPassword, // Store for admin reference
+			passwordResetBy: 'admin' // Track who reset it
+		};
 
-		await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: updateResult.email,
-            subject: 'Password Reset Approved - Temporary Password',
-            text: `
-Dear ${username},
-
-Your password reset request has been approved.
-
-Your temporary password is attached in a password-protected PDF.
-
-PDF Password: username + employeeNo
-
-⚠ IMPORTANT:
-This temporary password will expire in 12 hours.
-Please login and change your password immediately.
-
-Regards,
-System Administrator
-`,
-            attachments: [
-                {
-                    filename: 'TemporaryPassword.pdf',
-                    path: pdfPath
-                }
-            ]
-        });
-
-		setTimeout(() => {
-            if (fs.existsSync(pdfPath)) {
-                fs.unlinkSync(pdfPath);
-            }
-        }, 60000);
+		writeRequests(requests);
 
 		res.json({ 
 			message: 'Password reset request accepted successfully.',
 			username: username,
-			// tempPassword: encryptedTempPword,
+			tempPassword: tempPassword,
 			instruction: 'User should login with this temporary password and change it immediately.'
 		});
 
@@ -223,8 +192,8 @@ System Administrator
 	}
 });
 
-// PATCH /forgot-password/reject (admin rejects)
-router.patch('/reject', (req, res) => {
+// PATCH /forgot-password/reject - ADMIN ONLY (admin rejects)
+router.patch('/reject', authenticate, requireAdmin, (req, res) => {
 	try {
 		const { username, reason } = req.body;
 		
@@ -267,7 +236,7 @@ router.patch('/reject', (req, res) => {
 	}
 });
 
-// GET /forgot-password/status/:username (check request status)
+// GET /forgot-password/status/:username - PUBLIC (check request status)
 router.get('/status/:username', (req, res) => {
 	try {
 		const { username } = req.params;
@@ -302,7 +271,7 @@ router.get('/status/:username', (req, res) => {
 	}
 });
 
-// PATCH /forgot-password/change-password (user changes temporary password)
+// PATCH /forgot-password/change-password - PUBLIC (user changes temporary password)
 router.patch('/change-password', async (req, res) => {
 	try {
 		const { username, currentPassword, newPassword } = req.body;

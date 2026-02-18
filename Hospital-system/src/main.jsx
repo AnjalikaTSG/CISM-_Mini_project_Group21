@@ -5,7 +5,7 @@ import App from './App';
 import './index.css';
 
 // Route Guards
-import { ProtectedRoute, AdminRoute, GuestRoute } from './utils/RouteGuards';
+import { ProtectedRoute, AdminRoute, GuestRoute, MedicalStaffRoute } from './utils/RouteGuards';
 
 // Authentication Pages
 import LoginScreen from './pages/LoginScreen';
@@ -55,6 +55,7 @@ import Reports from './pages/Reports';
 import PatientReport from './pages/PatientReport';
 import StaffReport from './pages/StaffReport';
 import BookReport from './pages/BookReport';
+import AuditLogs from './pages/AuditLogs';
 
 import SideBar from './functions/SideBar';
 import NavBar from './functions/NavBar';
@@ -66,6 +67,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         {/* Public Authentication Routes - Only accessible when not logged in */}
         <Route path="/" element={<GuestRoute><LoginScreen/></GuestRoute>} />
+        <Route path="/login" element={<GuestRoute><LoginScreen /></GuestRoute>} />
         <Route path="/loginScreen" element={<GuestRoute><LoginScreen /></GuestRoute>} />
         <Route path="/registerScreen" element={<GuestRoute><RegisterScreen /></GuestRoute>} />
         <Route path="/admin-login" element={<GuestRoute><AdminLogin /></GuestRoute>} />
@@ -83,7 +85,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/AdminStaffVerification" element={<AdminRoute><AdminStaffVerification /></AdminRoute>} />
         <Route path="/PendingStaffRequests" element={<AdminRoute><PendingStaffRequests /></AdminRoute>} />
         
-        {/* Protected Patient Management Routes */}
+        {/* Patient Registration Routes - All authenticated staff can register patients */}
         <Route path="/personalDetails" element={<ProtectedRoute><PersonalDetails /></ProtectedRoute>} />
         <Route path="/personalDetails3" element={<ProtectedRoute><PersonalDetails3 /></ProtectedRoute>} />
         <Route path="/personalDetails5" element={<ProtectedRoute><PersonalDetails5 /></ProtectedRoute>} />
@@ -98,7 +100,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/SuccessfulRegistration" element={<ProtectedRoute><SuccessfulRegistration /></ProtectedRoute>} />
         
         {/* Protected Patient Records Routes */}
-        <Route path="/PatientRecords" element={<ProtectedRoute><PatientRecords /></ProtectedRoute>} />
+        <Route path="/patientRecords" element={<ProtectedRoute><PatientRecords /></ProtectedRoute>} />
         <Route path="/patient/:patientId" element={<ProtectedRoute><PatientDetail /></ProtectedRoute>} />
         <Route path="/patient/:patientId/personal" element={<ProtectedRoute><PatientDetail /></ProtectedRoute>} />
         <Route path="/patient/:patientId/opd" element={<ProtectedRoute><PatientOPDRecords /></ProtectedRoute>} />
@@ -118,6 +120,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/PatientReport" element={<AdminRoute><PatientReport /></AdminRoute>} />
         <Route path="/StaffReport" element={<AdminRoute><StaffReport /></AdminRoute>} />
         <Route path="/BookReport" element={<AdminRoute><BookReport /></AdminRoute>} />
+        <Route path="/audit-logs" element={<AdminRoute><AuditLogs /></AdminRoute>} />
         
         {/* Protected General Routes */}
         <Route path="/Notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
