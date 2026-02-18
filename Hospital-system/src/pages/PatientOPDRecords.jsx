@@ -1,7 +1,8 @@
-import React from 'react';
-import SideBar from '../functions/SideBar';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Calendar, User, Stethoscope } from 'lucide-react';
+import React from "react";
+import SideBar from "../functions/SideBar";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, FileText, Calendar, User, Stethoscope } from "lucide-react";
+import { addOpdRecord, getOpdRecords } from "../services/opd/Opd";
 
 const PatientOPDRecords = () => {
   const { patientId } = useParams();
@@ -13,47 +14,46 @@ const PatientOPDRecords = () => {
     date: new Date().toLocaleDateString(),
     symptoms: "",
     treatment: "",
-    investigation: ""
+    investigation: "",
   });
 
-  React.useEffect(() => {
+  const fetchRecords = async () => {
     if (patientId) {
       setLoading(true);
-      fetch(`http://localhost:3000/patient/${patientId}/opd`)
-        .then(res => res.json())
-        .then(data => {
-          setRecords(data || []);
-          setError("");
-        })
+      getOpdRecords(patientId)
+        .then((data) => setRecords(data))
         .catch(() => setError("Failed to fetch OPD records"))
         .finally(() => setLoading(false));
+
+      console.log("Data: ", records);
     }
+  };
+
+  React.useEffect(() => {
+    fetchRecords();
   }, [patientId]);
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newRecord = { ...form };
-    const res = await fetch(`http://localhost:3000/patient/${patientId}/opd`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newRecord)
-    });
-    if (res.ok) {
+    const res = await addOpdRecord(newRecord, patientId);
+    if (res) {
       try {
-        const updatedList = await res.json();
-        setRecords(updatedList);
+        await fetchRecords();
         setForm({
           date: new Date().toLocaleDateString(),
           symptoms: "",
           treatment: "",
-          investigation: ""
+          investigation: "",
         });
       } catch {
-        alert("Record saved, but could not update history from server response.");
+        alert(
+          "Record saved, but could not update history from server response.",
+        );
       }
     } else {
       let errorMsg = "Failed to save record. Please try again.";
@@ -64,6 +64,10 @@ const PatientOPDRecords = () => {
       alert(errorMsg);
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <SideBar>
@@ -95,7 +99,9 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">Date:</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Date:
+                    </label>
                   </div>
                   <input
                     type="text"
@@ -108,7 +114,9 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">Symptoms/Tentative Diagnosis:</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Symptoms/Tentative Diagnosis:
+                    </label>
                   </div>
                   <input
                     type="text"
@@ -122,7 +130,9 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">Treatment:</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Treatment:
+                    </label>
                   </div>
                   <input
                     type="text"
@@ -136,7 +146,9 @@ const PatientOPDRecords = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-600" />
-                    <label className="text-sm font-medium text-gray-700">Investigation:</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Investigation:
+                    </label>
                   </div>
                   <input
                     type="text"
@@ -170,15 +182,28 @@ const PatientOPDRecords = () => {
                 ) : error ? (
                   <div className="text-center py-12 text-red-500">{error}</div>
                 ) : records.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">No OPD records found.</div>
+                  <div className="text-center py-12 text-gray-500">
+                    No OPD records found.
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {records.map((rec, idx) => (
-                      <div key={idx} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="font-semibold text-gray-800">Date: {rec.date}</div>
-                        <div className="text-gray-700">Symptoms/Tentative Diagnosis: {rec.symptoms}</div>
-                        <div className="text-gray-700">Treatment: {rec.treatment}</div>
-                        <div className="text-gray-700">Investigation: {rec.investigation}</div>
+                      <div
+                        key={idx}
+                        className="border rounded-lg p-4 bg-gray-50"
+                      >
+                        <div className="font-semibold text-gray-800">
+                          Date: {rec.date}
+                        </div>
+                        <div className="text-gray-700">
+                          Symptoms/Tentative Diagnosis: {rec.symptoms}
+                        </div>
+                        <div className="text-gray-700">
+                          Treatment: {rec.treatment}
+                        </div>
+                        <div className="text-gray-700">
+                          Investigation: {rec.investigation}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -191,6 +216,5 @@ const PatientOPDRecords = () => {
     </SideBar>
   );
 };
-
 
 export default PatientOPDRecords;
