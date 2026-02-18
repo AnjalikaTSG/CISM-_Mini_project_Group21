@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, XCircle, User, Briefcase, IdCard, Hash, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { apiGet, apiPut } from '../utils/api';
 
 
 const PendingStaffRequests = () => {
@@ -10,16 +11,11 @@ const PendingStaffRequests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:3000';
-
   const fetchStaff = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/admin/staff`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch staff data');
-      }
-      const data = await response.json();
+      setError(null);
+      const data = await apiGet('/admin/staff');
       setStaff(data);
     } catch (err) {
       setError(err.message);
@@ -41,12 +37,7 @@ const PendingStaffRequests = () => {
   const handleApprove = async (_id) => {
     try {
       setActionMessage({ type: '', text: '' });
-      const response = await fetch(`${API_BASE_URL}/admin/staff/${_id}/approve`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to approve staff member');
+      const data = await apiPut(`/admin/staff/${_id}/approve`, {});
       setActionMessage({ type: 'success', text: 'Approved' });
       setLastAction('approved');
       setTimeout(() => {
@@ -63,12 +54,7 @@ const PendingStaffRequests = () => {
   const handleReject = async (_id) => {
     try {
       setActionMessage({ type: '', text: '' });
-      const response = await fetch(`${API_BASE_URL}/admin/staff/${_id}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to reject staff member');
+      const data = await apiPut(`/admin/staff/${_id}/reject`, {});
       setActionMessage({ type: 'success', text: 'Rejected' });
       setLastAction('rejected');
       setTimeout(() => {

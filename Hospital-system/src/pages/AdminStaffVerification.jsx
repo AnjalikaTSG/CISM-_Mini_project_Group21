@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, XCircle, User, Briefcase, IdCard, Hash, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { apiGet, apiPut } from '../utils/api';
 
 const AdminStaffVerification = () => {
   const [staff, setStaff] = useState([]);
@@ -8,17 +9,11 @@ const AdminStaffVerification = () => {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Backend API URL - update this to match your backend URL
-  const API_BASE_URL = 'http://localhost:3000'; // Update port as needed
-
   const fetchStaff = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/admin/staff`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch staff data');
-      }
-      const data = await response.json();
+      setError(null);
+      const data = await apiGet('/admin/staff');
       setStaff(data);
     } catch (err) {
       setError(err.message);
@@ -34,16 +29,7 @@ const AdminStaffVerification = () => {
   const handleAccept = async (_id) => {
     try {
       setMessage({ type: '', text: '' });
-      const response = await fetch(`${API_BASE_URL}/admin/staff/${_id}/approve`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to accept staff member');
-      }
+      const data = await apiPut(`/admin/staff/${_id}/approve`, {});
       setMessage({ type: 'success', text: data.message || 'Staff member accepted successfully!' });
       await fetchStaff();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
@@ -56,16 +42,7 @@ const AdminStaffVerification = () => {
   const handleReject = async (_id) => {
     try {
       setMessage({ type: '', text: '' });
-      const response = await fetch(`${API_BASE_URL}/admin/staff/${_id}/reject`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to reject staff member');
-      }
+      const data = await apiPut(`/admin/staff/${_id}/reject`, {});
       setMessage({ type: 'success', text: data.message || 'Staff member rejected successfully!' });
       await fetchStaff();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
