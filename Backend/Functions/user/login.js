@@ -128,7 +128,8 @@ async function loginStaff(req, res) {
         username: staff.username, 
         position: staff.position, 
         employeeNumber: staff.employee_number,
-        isAdmin: isAdmin
+        isAdmin: isAdmin,
+        isPasswordTemporary: staff.isPasswordTemporary
       } 
     });
   } catch (error) {
