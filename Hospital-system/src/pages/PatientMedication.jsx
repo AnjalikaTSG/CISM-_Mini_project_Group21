@@ -5,11 +5,16 @@ import SideBar from '../functions/SideBar';
 import { Calendar, Pill, FileText, Shield } from "lucide-react";
 import useRoleAccess from '../utils/useRoleAccess';
 import { apiGet, apiPost } from '../utils/api';
+import {
+  addMedicationRecord,
+  getMedicationRecords,
+} from "../services/medication/Medication";
 
 const PatientMedication = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const { canEdit, userPosition, loading: roleLoading } = useRoleAccess();
+  const [loading, setLoading] = useState(false);
   const [medications, setMedications] = useState([]);
   const [form, setForm] = useState({
     medication: "",

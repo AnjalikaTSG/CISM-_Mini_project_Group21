@@ -11,4 +11,5 @@ router.get('/:patientId/hospitalization', validatePatientId, canViewPatientRecor
 // POST new hospitalization record - requires write access and ownership verification
 router.post('/:patientId/hospitalization', validatePatientId, validateHospitalizationData, canWritePatientRecords, verifyPatientOwnership, verifyWriteAccess, addHospitalizationRecord);
 
+
 module.exports = router;

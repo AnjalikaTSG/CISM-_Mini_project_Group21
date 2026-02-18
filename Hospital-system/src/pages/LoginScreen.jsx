@@ -21,29 +21,30 @@ const LoginScreen = () => {
         setForgotData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleForgotSubmit = async (e) => {
-        e.preventDefault();
-        if (!forgotData.username.trim() || !forgotData.employeeNumber.trim()) {
-            setForgotStatus('Please fill both fields.');
-            return;
-        }
-        try {
-            const response = await fetch(`${API_BASE_URL}/forgot-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(forgotData),
-            });
-            const data = await response.json();
-            if (response.ok) {
-                setForgotStatus('Request submitted. Await admin approval.');
-                setForgotData({ username: '', employeeNumber: '' });
-            } else {
-                setForgotStatus(data.message || 'Error submitting request.');
-            }
-        } catch (err) {
-            setForgotStatus('Network error. Try again.');
-        }
-    };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotData.username.trim() || !forgotData.employeeNumber.trim()) {
+      setForgotStatus("Please fill both fields.");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(forgotData),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setForgotStatus("Request submitted. Await admin approval.");
+        setForgotData({ username: "", employeeNumber: "" });
+      } else {
+        setForgotStatus(data.message || "Error submitting request.");
+      }
+    } catch (err) {
+      setForgotStatus("Network error. Try again.");
+    }
+  };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -100,6 +101,7 @@ const LoginScreen = () => {
             setLoginError('Network error. Please try again.');
         }
     };
+
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));

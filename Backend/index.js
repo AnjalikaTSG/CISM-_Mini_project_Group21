@@ -62,6 +62,15 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(err.status || 500).json({
+        message: err.message || 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+});
+
 connectDB()
 
 app.listen(3000, () => {

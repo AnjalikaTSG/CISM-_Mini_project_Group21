@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Calendar, User, Stethoscope, Shield } from 'lucide-react';
 import useRoleAccess from '../utils/useRoleAccess';
 import { apiGet, apiPost } from '../utils/api';
+import { addOpdRecord, getOpdRecords } from "../services/opd/Opd";
 
 const PatientOPDRecords = () => {
   const { patientId } = useParams();
@@ -22,15 +23,9 @@ const PatientOPDRecords = () => {
   React.useEffect(() => {
     if (patientId) {
       setLoading(true);
-      apiGet(`/patient/${patientId}/opd`)
-        .then(data => {
-          setRecords(data || []);
-          setError("");
-        })
-        .catch(err => {
-          console.error('Error fetching OPD records:', err);
-          setError(err.message || "Failed to fetch OPD records");
-        })
+      getOpdRecords(patientId)
+        .then((data) => setRecords(data))
+        .catch(() => setError("Failed to fetch OPD records"))
         .finally(() => setLoading(false));
     }
   }, [patientId]);

@@ -10,6 +10,7 @@ const {
   sanitizeInput,
   createRateLimiter 
 } = require('../Middleware/validationMiddleware');
+
 const { 
   verifyPatientOwnership, 
   filterOwnedPatients, 
@@ -38,8 +39,6 @@ const registerStaff = require('../Functions/user/registerStaff');
 router.post('/register', validateStaffData, registerStaff);
 
 // ========== PROTECTED ROUTES (Authentication Required) ==========
-
-// Patient routes - require authentication + ownership verification
 const savePatient = require('../Functions/user/savePatient');
 router.post('/patient/save', authenticate, canWritePatientRecords, validatePatientData, savePatient);
 
@@ -66,7 +65,6 @@ const patientAssignmentRoutes = require('./patientAssignmentRoutes');
 router.use('/assignments', authenticate, patientAssignmentRoutes);
 
 // ========== ADMIN ROUTES (Admin Authentication Required) ==========
-
 // Admin staff management routes - require admin privileges
 const staffManagement = require('../Functions/admin/staffManagement');
 router.get('/admin/staff', authenticate, requireAdmin, staffManagement.getAllStaff);

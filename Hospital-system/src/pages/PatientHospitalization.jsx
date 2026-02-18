@@ -4,6 +4,10 @@ import SideBar from '../functions/SideBar';
 import { ArrowLeft, FileText, Building2, Calendar, User, Shield } from 'lucide-react';
 import useRoleAccess from '../utils/useRoleAccess';
 import { apiGet, apiPost } from '../utils/api';
+import {
+  addHospitalizationRecord,
+  getHospitalizationRecords,
+} from "../services/hospitalization/Hospitalization";
 
 const PatientHospitalization = () => {
   const { patientId } = useParams();
