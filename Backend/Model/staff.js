@@ -10,7 +10,13 @@ const staffSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   passwordResetAt: { type: Date },
   isPasswordTemporary: { type: Boolean, default: false },
-  lastLoginAt: { type: Date }
+  lastLoginAt: { type: Date },
+  lastActivityAt: { type: Date },
+  failedLoginAttempts: { type: Number, default: 0 },
+  accountLockedUntil: { type: Date, default: null }
+}, {
+  strict: true,        // Reject fields not in schema (NoSQL injection prevention)
+  strictQuery: true    // Apply strict mode to query filters
 });
 
 // Prevent OverwriteModelError

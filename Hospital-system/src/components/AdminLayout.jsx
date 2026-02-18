@@ -15,6 +15,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import useAuth from '../utils/useAuth';
+import useSessionMonitor from '../utils/useSessionMonitor';
 
 const adminSidebarItems = [
   { label: 'Admin Home', path: '/admin-dashboard', icon: <Home className="w-5 h-5 mr-2" /> },
@@ -25,6 +26,7 @@ const adminSidebarItems = [
   { label: 'Patient Records', path: '/patientRecords', icon: <FileText className="w-5 h-5 mr-2" /> },
   { label: 'Notifications', path: '/Notifications', icon: <Bell className="w-5 h-5 mr-2" /> },
   { label: 'Reports & Analytics', path: '/Reports', icon: <BarChart3 className="w-5 h-5 mr-2" /> },
+  { label: 'Audit Logs', path: '/audit-logs', icon: <Shield className="w-5 h-5 mr-2" /> },
   { label: 'Request Lost Book', path: '/RequestLostBook', icon: <Building2 className="w-5 h-5 mr-2" /> },
 //   admin
   { label: 'Logout', path: '/admin-login', icon: <LogOut className="w-5 h-5 mr-2" />, action: 'logout' },
@@ -35,6 +37,9 @@ const AdminLayout = ({ children, title = "Admin Control Panel" }) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState('/admin-dashboard');
+
+  // Monitor session timeout
+  useSessionMonitor(true);
 
   // Update active tab based on current location
   useEffect(() => {

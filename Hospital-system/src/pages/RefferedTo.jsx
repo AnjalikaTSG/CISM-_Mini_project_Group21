@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Calendar, User, Building, Phone, Mail, MapPin, Stethoscope, FileText, Clock, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, User, Building, Phone, Mail, MapPin, Stethoscope, FileText, Clock, AlertCircle, Shield } from "lucide-react";
 import SideBar from "../functions/SideBar";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import useRoleAccess from '../utils/useRoleAccess';
+import { apiGet, apiPost } from '../utils/api';
 
 const RefferedTo = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
+  const { canEdit, userPosition, loading: roleLoading } = useRoleAccess();
   const today = new Date().toISOString().split("T")[0]; // Get today's date
   const [referralData, setReferralData] = useState({
     referringDoctor: "",
@@ -31,13 +34,13 @@ const RefferedTo = () => {
     const fetchRecords = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/patient/${patientId}`);
-        const patient = await res.json();
+        const patient = await apiGet(`/patient/${patientId}`);
         const records = patient.tab6?.referralRecords || [];
         setReferralRecords(records);
         setError("");
       } catch (err) {
-        setError("Failed to fetch referral records");
+        console.error('Error fetching referral records:', err);
+        setError(err.message || "Failed to fetch referral records");
       } finally {
         setLoading(false);
       }
@@ -64,19 +67,14 @@ const RefferedTo = () => {
     };
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/patient/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientId,
-          tabs: {
-            tab6: {
-              referralRecords: [...referralRecords, newRecord]
-            }
+      const updatedPatient = await apiPost("/patient/save", {
+        patientId,
+        tabs: {
+          tab6: {
+            referralRecords: [...referralRecords, newRecord]
           }
-        })
+        }
       });
-      const updatedPatient = await res.json();
       setReferralRecords(updatedPatient.tab6.referralRecords);
       setReferralData({
         referringDoctor: "",
@@ -227,8 +225,9 @@ const RefferedTo = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-lg border border-gray-200">
           <div className="p-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Left Column - Add New Referral */}
+            <div className={`grid ${canEdit ? 'md:grid-cols-2' : 'grid-cols-1'} gap-8`}>
+              {/* Left Column - Add New Referral - Only for doctors and nurses */}
+              {canEdit && (
               <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Stethoscope className="w-5 h-5 text-blue-600" />
@@ -328,6 +327,7 @@ const RefferedTo = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Right Column - Referral History */}
               <div className="space-y-6">

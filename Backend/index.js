@@ -4,16 +4,93 @@ const routes = require('./Routes/Routes');
 const notificationRoutes = require('./Routes/notifications');
 const reportRoutes = require('./Routes/reportRoutes');
 const forgotPasswordRouter = require('./Routes/forgotPassword');
+const sessionRoutes = require('./Routes/sessionRoutes');
+const mongoSanitize = require('express-mongo-sanitize');
+const opdRoutes = require('./Routes/opdRecordsRoutes');
+const hospitalizationRoutes = require('./Routes/hospitalizationRecordsRoutes');
+const medicationRoutes = require('./Routes/medicationRecordsRoutes');
+const staffRoutes = require('./Routes/staffRoutes');
 const app=express()
 const cors = require('cors');
 
-app.use(express.json());
+// Body parser middleware - support both JSON and form-data
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: false, limit: '10kb' }));
 app.use(cors());
+
+// ============================================
+// NoSQL INJECTION PREVENTION
+// ============================================
+// express-mongo-sanitize: Removes MongoDB operators from user input
+// Prevents attacks like: {"username": {"$ne": null}}
+app.use((req, res, next) => {
+    const sanitize = (obj) => {
+        if (!obj) return;
+
+        Object.keys(obj).forEach(key => {
+            if (key.startsWith('$') || key.includes('.')) {
+                delete obj[key];
+            } else if (typeof obj[key] === 'object') {
+                sanitize(obj[key]);
+            }
+        });
+    };
+
+    sanitize(req.body);
+    sanitize(req.params);
+    sanitize(req.query);
+
+    next();
+});
+
+
+// Additional validation: Block requests with object values in body
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === 'object') {
+    for (const key in req.body) {
+      const value = req.body[key];
+      // If value is an object (but not null, not array, not date), it's suspicious
+      if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        console.warn(`[SECURITY] Suspicious object value detected in field: ${key}`);
+        console.warn(`[SECURITY] Request from IP: ${req.ip}`);
+        return res.status(400).json({
+          message: 'Invalid request format',
+          error: 'VALIDATION_ERROR',
+          detail: `Field "${key}" contains invalid data type`
+        });
+      }
+    }
+  }
+  next();
+});
 
 app.use('/', routes);
 app.use('/notifications', notificationRoutes);
 app.use('/reports', reportRoutes);
 app.use('/forgot-password', forgotPasswordRouter);
+app.use('/session', sessionRoutes);
+app.use('/opd-records', opdRoutes);
+app.use('/hospitalization-records', hospitalizationRoutes);
+app.use('/medication-records', medicationRoutes);
+app.use('/staff', staffRoutes);
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(err.status || 500).json({
+        message: err.message || 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(err.status || 500).json({
+        message: err.message || 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+});
 
 connectDB()
 
