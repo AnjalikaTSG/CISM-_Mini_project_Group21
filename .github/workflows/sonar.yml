@@ -24,11 +24,28 @@ jobs:
               with:
                   node-version: 18
 
-            - name: Install dependencies
-              run: npm install
+            # Install Frontend
+            - name: Install Frontend Dependencies
+              run: |
+                  cd Hospital-system
+                  npm install
 
-            - name: Run tests (if available)
-              run: npm test --if-present
+            # Install Backend
+            - name: Install Backend Dependencies
+              run: |
+                  cd Backend
+                  npm install
+
+            # Optional: Run tests if available
+            - name: Run Frontend Tests
+              run: |
+                  cd Hospital-system
+                  npm test --if-present
+
+            - name: Run Backend Tests
+              run: |
+                  cd backend
+                  npm test --if-present
 
             - name: SonarCloud Scan
               uses: SonarSource/sonarcloud-github-action@v2
@@ -39,4 +56,5 @@ jobs:
                   args: >
                       -Dsonar.projectKey=cism21_hms
                       -Dsonar.organization=cism21
-                      -Dsonar.sources=.
+                      -Dsonar.sources=Hospital-system,Backend
+                      -Dsonar.exclusions=**/node_modules/**
