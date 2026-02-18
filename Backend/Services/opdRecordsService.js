@@ -22,6 +22,8 @@ const getAllPatientOpdRecords = async (patientId) => {
     try {
         const patientRecords = await Patient.find({ patientID: patientId });
 
+        console.log(patientRecords);
+
         return {
             patientRecords: patientRecords.map((record) => ({
                 patientID: record.patientID,
