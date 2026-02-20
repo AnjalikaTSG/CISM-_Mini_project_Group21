@@ -1,10 +1,19 @@
+require('dotenv').config(); 
 const crypto = require('crypto');
 
 const algorithm = 'aes-256-cbc';
-const key = Buffer.from(process.env.SECRET_KEY, 'utf-8');
-const iv = crypto.randomBytes(16);
+
+// Check if ENCRYPTION_KEY exists
+if (!process.env.ENCRYPTION_KEY) {
+    console.error('ERROR: ENCRYPTION_KEY is not set in .env file');
+    process.exit(1);
+}
+
+// AES-256 requires exactly 32 bytes key (from hex string)
+const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
 
 function encrypt(text) {
+    const iv = crypto.randomBytes(16); // Generate new IV for each encryption
     const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
